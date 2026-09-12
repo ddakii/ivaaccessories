@@ -79,7 +79,7 @@ app.use("/api/overview", overviewRouter);
 app.use("/api/contact", contactRouter);
 
 if (env.isProd) {
-  const clientDist = path.resolve(process.cwd(), "client/dist");
+  const clientDist = path.resolve(here, "../../client/dist");
   app.use(express.static(clientDist));
   app.get("*", (req, res, next) => {
     if (req.path.startsWith("/api") || req.path.startsWith("/uploads")) return next();
