@@ -1,0 +1,237 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+}
+
+enum Gender {
+  WOMEN
+  MEN
+  UNISEX
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         AdminRole @default(ADMIN)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  inventoryMovements InventoryMovement[]
+
+  @@index([email])
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String    @default("")
+  imageUrl    String?
+  isActive    Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+
+  @@index([slug])
+  @@index([isActive])
+}
+
+model Product {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  description  String   @default("")
+  sku          String   @unique
+  price        Decimal  @db.Decimal(12, 2)
+  salePrice    Decimal? @db.Decimal(12, 2)
+  categoryId   String
+  category     Category @relation(fields: [categoryId], references: [id])
+  gender       Gender   @default(UNISEX)
+  stock        Int      @default(0)
+  colors       String[] @default([])
+  sizes        String[] @default([])
+  isFeatured   Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  isNewArrival Boolean  @default(false)
+  salesCount   Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  images             ProductImage[]
+  orderItems         OrderItem[]
+  inventoryMovements InventoryMovement[]
+
+  @@index([slug])
+  @@index([categoryId])
+  @@index([gender])
+  @@index([isActive, isFeatured])
+  @@index([sku])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String?
+  sortOrder Int     @default(0)
+
+  @@index([productId])
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  fullName  String
+  phone     String
+  email     String?
+  city      String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  orders    Order[]
+
+  @@unique([phone])
+  @@index([email])
+  @@index([fullName])
+}
+
+model Order {
+  id             String      @id @default(cuid())
+  orderNumber    String      @unique
+  customerId     String
+  customer       Customer    @relation(fields: [customerId], references: [id])
+  fullName       String
+  phone          String
+  email          String?
+  city           String
+  address        String
+  addressDetails String?
+  notes          String?
+  internalNotes  String?
+  paymentMethod  String      @default("COD")
+  status         OrderStatus @default(PENDING)
+  subtotal       Decimal     @db.Decimal(12, 2)
+  deliveryFee    Decimal     @db.Decimal(12, 2)
+  total          Decimal     @db.Decimal(12, 2)
+  deliveredAt    DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  items         OrderItem[]
+  statusHistory OrderStatusHistory[]
+
+  @@index([orderNumber])
+  @@index([phone])
+  @@index([status])
+  @@index([createdAt])
+  @@index([customerId])
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product @relation(fields: [productId], references: [id])
+  productName String
+  sku         String
+  imageUrl    String?
+  unitPrice   Decimal @db.Decimal(12, 2)
+  quantity    Int
+  color       String?
+  size        String?
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model OrderStatusHistory {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderStatus
+  note      String?
+  createdAt DateTime    @default(now())
+
+  @@index([orderId])
+}
+
+model InventoryMovement {
+  id               String     @id @default(cuid())
+  productId        String
+  product          Product    @relation(fields: [productId], references: [id])
+  previousQuantity Int
+  newQuantity      Int
+  change           Int
+  reason           String
+  adminUserId      String?
+  adminUser        AdminUser? @relation(fields: [adminUserId], references: [id])
+  createdAt        DateTime   @default(now())
+
+  @@index([productId])
+  @@index([createdAt])
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model WebsiteSettings {
+  id                       String   @id @default("default")
+  storeName                String   @default("IVA Accessories")
+  storeLogo                String?
+  storeEmail               String   @default("")
+  storePhone               String   @default("")
+  storeAddress             String   @default("")
+  instagramUrl             String   @default("")
+  facebookUrl              String   @default("")
+  tiktokUrl                String   @default("")
+  deliveryFee              Decimal  @default(0) @db.Decimal(12, 2)
+  freeDeliveryThreshold    Decimal? @db.Decimal(12, 2)
+  announcementBarText      String   @default("Dorëzim falas për porosi të zgjedhura. Pagesë në dorëzim.")
+  announcementBarEnabled   Boolean  @default(true)
+  footerText               String   @default("IVA Accessories. Çanta, syze dhe portofola të përzgjedhura me kujdes.")
+  contactInformation       String   @default("")
+  orderConfirmationMessage String   @default("Faleminderit për porosinë. Do t'ju kontaktojmë së shpejti për ta konfirmuar.")
+  deliveryInformation      String   @default("Do ta konfirmojmë porosinë dhe do ta organizojmë dorëzimin. Paguani kur t'ju vijë porosia.")
+  heroHeadline             String   @default("Aksesorë që përcaktojnë stilin tuaj.")
+  heroSubheadline          String   @default("Një koleksion i përzgjedhur çantash, syzesh dhe portofolash — për çdo ditë.")
+  heroImageUrl             String?
+  promoBannerTitle         String   @default("Përzgjedhja e re")
+  promoBannerText          String   @default("Zbuloni çanta të strukturuara, syze të rafinuara dhe portofola kompakte për gardërobën moderne.")
+  promoBannerCta           String   @default("Shiko koleksionin")
+  promoBannerImage         String?
+  whyShopBenefits          Json     @default("[{\"title\":\"Aksesorë të përzgjedhur\",\"description\":\"Çdo copë zgjidhet për materialin, formën dhe përdorimin e përditshëm.\"},{\"title\":\"Porosi e lehtë\",\"description\":\"Shfletoni, shtoni në çantë dhe porositni me disa hapa — pa llogari.\"},{\"title\":\"Pagesë në dorëzim\",\"description\":\"Paguani kur t'ju vijë porosia. E thjeshtë dhe e qartë.\"},{\"title\":\"Mbështetje për klientët\",\"description\":\"Pyetje për madhësinë, stokun ose një porosi? Jemi këtu.\"}]")
+  updatedAt                DateTime @updatedAt
+}
+
+model OrderCounter {
+  id      String @id @default("default")
+  current Int    @default(1000)
+}
