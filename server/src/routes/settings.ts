@@ -4,6 +4,7 @@ import { ok } from "../lib/apiResponse.js";
 import { requireAdmin } from "../middleware/auth.js";
 import { settingsWriteSchema } from "../validation/schemas.js";
 import { serializeDecimal } from "../lib/money.js";
+import { offlineSettings } from "../lib/offlineStore.js";
 
 export const settingsRouter = Router();
 
@@ -31,8 +32,8 @@ settingsRouter.get("/", async (_req, res, next) => {
       create: { id: "default" },
     });
     res.json(ok(serializeSettings(settings)));
-  } catch (error) {
-    next(error);
+  } catch {
+    res.json(ok(offlineSettings()));
   }
 });
 

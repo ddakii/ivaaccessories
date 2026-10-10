@@ -44,6 +44,7 @@ export default defineConfig({
     proxy: {
       "/api": {
         target: "http://localhost:4000",
+        selfHandleResponse: true,
         configure(proxy) {
           proxy.on("error", (_error, req, res) => {
             if ("writeHead" in res && tryOfflineApi(req, res)) return;
@@ -51,6 +52,14 @@ export default defineConfig({
               res.writeHead(502, { "Content-Type": "application/json" });
               res.end(JSON.stringify({ success: false, error: "API is not running" }));
             }
+          });
+          proxy.on("proxyRes", (proxyRes, req, res) => {
+            if ((proxyRes.statusCode ?? 500) >= 500 && "writeHead" in res && tryOfflineApi(req, res)) {
+              proxyRes.resume();
+              return;
+            }
+            res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+            proxyRes.pipe(res);
           });
         },
       },

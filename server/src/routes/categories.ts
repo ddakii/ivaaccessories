@@ -4,6 +4,7 @@ import { ok, HttpError } from "../lib/apiResponse.js";
 import { categoryWriteSchema } from "../validation/schemas.js";
 import { requireAdmin } from "../middleware/auth.js";
 import { slugify } from "../lib/slug.js";
+import { offlineCategories } from "../lib/offlineStore.js";
 
 export const categoriesRouter = Router();
 
@@ -17,7 +18,11 @@ categoriesRouter.get("/", async (req, res, next) => {
     });
     res.json(ok(categories));
   } catch (error) {
-    next(error);
+    try {
+      res.json(ok(await offlineCategories()));
+    } catch {
+      next(error);
+    }
   }
 });
 

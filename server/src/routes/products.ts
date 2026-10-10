@@ -8,6 +8,7 @@ import { slugify } from "../lib/slug.js";
 import { serializeDecimal } from "../lib/money.js";
 import { recordInventoryChange } from "../services/inventoryService.js";
 import { COOKIE_NAME } from "../lib/jwt.js";
+import { offlineProductBySlug, offlineProducts } from "../lib/offlineStore.js";
 
 export const productsRouter = Router();
 
@@ -97,7 +98,13 @@ productsRouter.get("/", async (req, res, next) => {
       })
     );
   } catch (error) {
-    next(error);
+    try {
+      const query = productFilterSchema.parse(req.query);
+      const fallback = await offlineProducts(query);
+      res.json(ok(fallback.items, fallback.meta));
+    } catch {
+      next(error);
+    }
   }
 });
 
@@ -119,7 +126,13 @@ productsRouter.get("/slug/:slug", async (req, res, next) => {
     });
     res.json(ok({ product: serializeProduct(product), related: related.map(serializeProduct) }));
   } catch (error) {
-    next(error);
+    try {
+      const fallback = await offlineProductBySlug(req.params.slug);
+      if (!fallback) throw error;
+      res.json(ok(fallback));
+    } catch {
+      next(error);
+    }
   }
 });
 
