@@ -41,6 +41,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    fs: { allow: [".."] },
     proxy: {
       "/api": {
         target: "http://localhost:4000",

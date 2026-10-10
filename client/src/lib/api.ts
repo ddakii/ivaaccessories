@@ -1,3 +1,5 @@
+import { offlineApiResponse } from "./offlineCatalog";
+
 const API = import.meta.env.VITE_API_URL ?? "";
 
 export class ApiError extends Error {
@@ -15,16 +17,30 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  const res = await fetch(`${API}${path}`, {
-    ...options,
-    headers,
-    credentials: "include",
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok || json.success === false) {
-    throw new ApiError(res.status, json.error ?? "Request failed", json.details);
+  const method = (options.method ?? "GET").toUpperCase();
+  try {
+    const res = await fetch(`${API}${path}`, {
+      ...options,
+      headers,
+      credentials: "include",
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json.success === false) {
+      if (method === "GET") {
+        const fallback = offlineApiResponse(path);
+        if (fallback) return fallback as T;
+      }
+      throw new ApiError(res.status, json.error ?? "Request failed", json.details);
+    }
+    return json as T;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    if (method === "GET") {
+      const fallback = offlineApiResponse(path);
+      if (fallback) return fallback as T;
+    }
+    throw error;
   }
-  return json as T;
 }
 
 export type ApiList<T> = {

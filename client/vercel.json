@@ -1,3 +1,6 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/uploads/:path*", "destination": "/uploads/:path*" },
+    { "source": "/((?!uploads/).*)", "destination": "/index.html" }
+  ]
 }
