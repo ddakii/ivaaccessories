@@ -16,7 +16,17 @@ export function formatMoney(value: string | number) {
 
 export function mediaUrl(url?: string | null) {
   if (!url) return "";
-  if (url.startsWith("http") || url.startsWith("data:")) return url;
+  if (url.startsWith("data:")) return url;
+  if (url.startsWith("http")) {
+    try {
+      const parsed = new URL(url);
+      if (parsed.pathname.startsWith("/uploads")) return parsed.pathname;
+    } catch {
+      return url;
+    }
+    return url;
+  }
+  if (url.startsWith("/uploads")) return url;
   const api = import.meta.env.VITE_API_URL ?? "";
   return `${api}${url}`;
 }

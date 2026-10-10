@@ -25,7 +25,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       credentials: "include",
     });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok || json.success === false) {
+    if (!res.ok || json.success !== true) {
       if (method === "GET") {
         const fallback = offlineApiResponse(path);
         if (fallback) return fallback as T;
